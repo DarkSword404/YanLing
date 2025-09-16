@@ -59,60 +59,99 @@ def index():
 @main_bp.route('/scoreboard')
 def scoreboard():
     """积分榜"""
-    # 个人积分榜
-    user_scores = (db.session.query(
-        User.id,
-        User.username,
-        func.sum(Submission.points_awarded).label('total_score'),
-        func.count(Submission.id).label('solve_count')
-    ).join(Submission, User.id == Submission.user_id)
-     .filter(Submission.is_correct == True)
-     .group_by(User.id, User.username)
-     .order_by(desc('total_score'))
-     .limit(50)
-     .all())
+    view_type = request.args.get('view', 'user')  # 默认显示个人排行
+    page = request.args.get('page', 1, type=int)
     
-    user_scoreboard = []
-    for rank, (user_id, username, total_score, solve_count) in enumerate(user_scores, 1):
-        user_scoreboard.append({
-            'rank': rank,
-            'username': username,
-            'score': int(total_score) if total_score else 0,
-            'solve_count': solve_count
-        })
+    # 统计数据
+    stats = {
+        'total_participants': 0,
+        'total_solves': Submission.query.filter_by(is_correct=True).count(),
+        'avg_score': 0,
+        'highest_score': 0
+    }
     
-    # 团队积分榜
-    team_scores = (db.session.query(
-        Team.id,
-        Team.name,
-        func.sum(Submission.points_awarded).label('total_score'),
-        func.count(func.distinct(Submission.challenge_id)).label('solve_count')
-    ).join(User, Team.id == User.team_id)
-     .join(Submission, User.id == Submission.user_id)
-     .filter(Submission.is_correct == True)
-     .group_by(Team.id, Team.name)
-     .order_by(desc('total_score'))
-     .limit(50)
-     .all())
+    rankings = []
+    pagination = None
     
-    team_scoreboard = []
-    for rank, (team_id, team_name, total_score, solve_count) in enumerate(team_scores, 1):
-        team_scoreboard.append({
-            'rank': rank,
-            'team_name': team_name,
-            'score': int(total_score) if total_score else 0,
-            'solve_count': solve_count
-        })
+    if view_type == 'team':
+        # 团队积分榜
+        team_query = (db.session.query(
+            Team.id,
+            Team.name,
+            func.sum(Submission.points_awarded).label('score'),
+            func.count(func.distinct(Submission.challenge_id)).label('solve_count'),
+            func.max(Submission.created_at).label('last_submission'),
+            func.count(func.distinct(User.id)).label('member_count')
+        ).join(User, Team.id == User.team_id)
+         .join(Submission, User.id == Submission.user_id)
+         .filter(Submission.is_correct == True)
+         .group_by(Team.id, Team.name)
+         .order_by(desc('score')))
+        
+        teams = team_query.all()
+        stats['total_participants'] = len(teams)
+        
+        for team_data in teams:
+            team = Team.query.get(team_data.id)
+            rankings.append({
+                'id': team_data.id,
+                'name': team_data.name,
+                'score': int(team_data.score) if team_data.score else 0,
+                'solve_count': team_data.solve_count,
+                'last_submission': team_data.last_submission,
+                'member_count': team_data.member_count,
+                'captain': team.captain if team else None
+            })
+            
+        if rankings:
+            stats['highest_score'] = rankings[0]['score']
+            stats['avg_score'] = round(sum(r['score'] for r in rankings) / len(rankings), 1)
+    
+    else:
+        # 个人积分榜
+        user_query = (db.session.query(
+            User.id,
+            User.username,
+            User.nickname,
+            func.sum(Submission.points_awarded).label('score'),
+            func.count(Submission.id).label('solve_count'),
+            func.max(Submission.created_at).label('last_submission')
+        ).join(Submission, User.id == Submission.user_id)
+         .filter(Submission.is_correct == True)
+         .group_by(User.id, User.username, User.nickname)
+         .order_by(desc('score')))
+        
+        users = user_query.all()
+        stats['total_participants'] = len(users)
+        
+        for user_data in users:
+            user = User.query.get(user_data.id)
+            rankings.append({
+                'id': user_data.id,
+                'username': user_data.username,
+                'nickname': user_data.nickname,
+                'score': int(user_data.score) if user_data.score else 0,
+                'solve_count': user_data.solve_count,
+                'last_submission': user_data.last_submission,
+                'team': user.team if user else None
+            })
+            
+        if rankings:
+            stats['highest_score'] = rankings[0]['score']
+            stats['avg_score'] = round(sum(r['score'] for r in rankings) / len(rankings), 1)
     
     if request.is_json:
         return jsonify({
-            'user_scoreboard': user_scoreboard,
-            'team_scoreboard': team_scoreboard
+            'view_type': view_type,
+            'stats': stats,
+            'rankings': rankings
         })
     
     return render_template('scoreboard.html',
-                         user_scoreboard=user_scoreboard,
-                         team_scoreboard=team_scoreboard)
+                         view_type=view_type,
+                         stats=stats,
+                         rankings=rankings,
+                         pagination=pagination)
 
 
 @main_bp.route('/about')
@@ -215,3 +254,54 @@ def search():
         return jsonify(results)
     
     return render_template('search.html', results=results, query=query)
+
+
+@main_bp.route('/user/<int:user_id>/submissions')
+def user_submissions(user_id):
+    """用户提交记录页面"""
+    user = User.query.get_or_404(user_id)
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    
+    # 获取用户的提交记录
+    submissions_query = (Submission.query
+                        .filter_by(user_id=user_id)
+                        .order_by(desc(Submission.created_at)))
+    
+    pagination = submissions_query.paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    submissions = pagination.items
+    
+    # 统计数据
+    stats = {
+        'total_submissions': Submission.query.filter_by(user_id=user_id).count(),
+        'correct_submissions': Submission.query.filter_by(user_id=user_id, is_correct=True).count(),
+        'total_points': db.session.query(func.sum(Submission.points_awarded)).filter_by(user_id=user_id, is_correct=True).scalar() or 0,
+        'solved_challenges': len(set(s.challenge_id for s in Submission.query.filter_by(user_id=user_id, is_correct=True).all()))
+    }
+    
+    if request.is_json:
+        return jsonify({
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'nickname': user.nickname
+            },
+            'stats': stats,
+            'submissions': [s.to_dict() for s in submissions],
+            'pagination': {
+                'page': page,
+                'pages': pagination.pages,
+                'per_page': per_page,
+                'total': pagination.total,
+                'has_prev': pagination.has_prev,
+                'has_next': pagination.has_next
+            }
+        })
+    
+    return render_template('user_submissions.html', 
+                         user=user, 
+                         submissions=submissions,
+                         stats=stats,
+                         pagination=pagination)

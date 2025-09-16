@@ -21,6 +21,7 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_verified = db.Column(db.Boolean, default=False)
     is_admin = db.Column(db.Boolean, default=False)
+    role = db.Column(db.String(20), default='user')  # 用户角色：user, admin
     
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -64,6 +65,11 @@ class User(UserMixin, db.Model):
         return [submission.challenge for submission in self.submissions 
                 if submission.is_correct]
     
+    def get_solved_challenges_count(self):
+        """获取已解决题目的数量"""
+        return len([submission for submission in self.submissions 
+                   if submission.is_correct])
+    
     def has_solved(self, challenge):
         """检查是否已解决某题目"""
         return self.submissions.filter_by(challenge_id=challenge.id, is_correct=True).first() is not None
@@ -80,6 +86,7 @@ class User(UserMixin, db.Model):
             'is_active': self.is_active,
             'is_verified': self.is_verified,
             'is_admin': self.is_admin,
+            'role': self.role,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'team_id': self.team_id,
             'score': self.get_score()

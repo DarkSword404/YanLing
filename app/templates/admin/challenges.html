@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}题目管理{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>题目管理</h2>
+                <a href="{{ url_for('admin.create_challenge') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> 添加题目
+                </a>
+            </div>
+
+            <!-- 搜索和筛选 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" name="search" 
+                                   placeholder="搜索题目名称或描述..." value="{{ search or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <select name="category" class="form-select">
+                                <option value="">所有分类</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if category == cat.id|string %}selected{% endif %}>
+                                    {{ cat.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="status" class="form-select">
+                                <option value="">所有状态</option>
+                                <option value="active" {% if status == 'active' %}selected{% endif %}>激活</option>
+                                <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>禁用</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-outline-primary w-100">搜索</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 题目列表 -->
+            <div class="card">
+                <div class="card-body">
+                    {% if challenges.items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>题目名称</th>
+                                    <th>分类</th>
+                                    <th>难度</th>
+                                    <th>分值</th>
+                                    <th>状态</th>
+                                    <th>解题数</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for challenge in challenges.items %}
+                                <tr>
+                                    <td>{{ challenge.id }}</td>
+                                    <td>
+                                        <a href="{{ url_for('challenges.detail', challenge_id=challenge.id) }}" 
+                                           class="text-decoration-none" target="_blank">
+                                            {{ challenge.name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ challenge.category.name if challenge.category else '未分类' }}</span>
+                                    </td>
+                                    <td>
+                                        {% if challenge.difficulty == 'easy' %}
+                                        <span class="badge bg-success">简单</span>
+                                        {% elif challenge.difficulty == 'medium' %}
+                                        <span class="badge bg-warning">中等</span>
+                                        {% elif challenge.difficulty == 'hard' %}
+                                        <span class="badge bg-danger">困难</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ challenge.points }}</td>
+                                    <td>
+                                        {% if challenge.is_active %}
+                                        <span class="badge bg-success">激活</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">禁用</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ challenge.get_solve_count() or 0 }}</td>
+                                    <td>{{ challenge.created_at.strftime('%Y-%m-%d %H:%M') if challenge.created_at else '' }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('admin.edit_challenge', challenge_id=challenge.id) }}" 
+                                               class="btn btn-outline-primary">编辑</a>
+                                            <button type="button" class="btn btn-outline-warning" 
+                                                    onclick="toggleChallengeStatus('{{ challenge.id }}')">
+                                                {% if challenge.is_active %}禁用{% else %}启用{% endif %}
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger" 
+                                                    onclick="deleteChallenge('{{ challenge.id }}')">删除</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 分页 -->
+                    {% if challenges.pages > 1 %}
+                    <nav aria-label="题目列表分页">
+                        <ul class="pagination justify-content-center">
+                            {% if challenges.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin.challenges', page=challenges.prev_num, search=search, category=category, status=status) }}">上一页</a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for page_num in challenges.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != challenges.page %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('admin.challenges', page=page_num, search=search, category=category, status=status) }}">{{ page_num }}</a>
+                                    </li>
+                                    {% else %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                    {% endif %}
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">…</span>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if challenges.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin.challenges', page=challenges.next_num, search=search, category=category, status=status) }}">下一页</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+
+                    {% else %}
+                    <div class="text-center py-5">
+                        <h5>暂无题目</h5>
+                        <p class="text-muted">还没有任何题目，点击上方按钮添加第一个题目吧！</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleChallengeStatus(challengeId) {
+    if (confirm('确定要切换题目状态吗？')) {
+        fetch(`/admin/challenges/${challengeId}/toggle_active`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('操作失败: ' + data.error);
+            } else {
+                location.reload();
+            }
+        })
+        .catch(error => {
+            alert('操作失败');
+        });
+    }
+}
+
+function deleteChallenge(challengeId) {
+    if (confirm('确定要删除这个题目吗？此操作不可恢复！')) {
+        fetch(`/admin/challenges/${challengeId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('删除失败: ' + data.error);
+            } else {
+                location.reload();
+            }
+        })
+        .catch(error => {
+            alert('删除失败');
+        });
+    }
+}
+</script>
+{% endblock %}

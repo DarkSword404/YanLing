@@ -77,7 +77,12 @@ def dashboard():
                          stats=stats,
                          recent_users=recent_users,
                          recent_submissions=recent_submissions,
-                         challenge_stats=challenge_stats)
+                         challenge_stats=challenge_stats,
+                         system_info={
+                             'memory_usage': 65,
+                             'disk_usage': 45,
+                             'uptime': '2天 3小时'
+                         })
 
 
 @admin_bp.route('/users')
@@ -88,10 +93,26 @@ def users():
     page = request.args.get('page', 1, type=int)
     per_page = 20
     search = request.args.get('search', '').strip()
+    role = request.args.get('role', '').strip()
+    status = request.args.get('status', '').strip()
     
     query = User.query
+    
+    # 搜索用户名或邮箱
     if search:
         query = query.filter(User.username.contains(search) | User.email.contains(search))
+    
+    # 按角色筛选
+    if role == 'admin':
+        query = query.filter(User.is_admin == True)
+    elif role == 'user':
+        query = query.filter(User.is_admin == False)
+    
+    # 按状态筛选
+    if status == 'active':
+        query = query.filter(User.is_active == True)
+    elif status == 'inactive':
+        query = query.filter(User.is_active == False)
     
     users = query.order_by(desc(User.created_at)).paginate(
         page=page, per_page=per_page, error_out=False
@@ -113,6 +134,77 @@ def users():
     return render_template('admin/users.html', users=users, search=search)
 
 
+@admin_bp.route('/users', methods=['POST'])
+@login_required
+@admin_required
+def create_user():
+    """创建新用户"""
+    data = request.form if request.form else request.get_json()
+    if not data:
+        if request.is_json:
+            return jsonify({'error': '缺少请求数据'}), 400
+        flash('缺少请求数据', 'error')
+        return redirect(url_for('admin.users'))
+    
+    username = data.get('username', '').strip()
+    email = data.get('email', '').strip()
+    password = data.get('password', '').strip()
+    is_admin = bool(data.get('is_admin'))
+    is_active = bool(data.get('is_active', True))
+    
+    # 验证必填字段
+    if not username or not email or not password:
+        error = '用户名、邮箱和密码不能为空'
+        if request.is_json:
+            return jsonify({'error': error}), 400
+        flash(error, 'error')
+        return redirect(url_for('admin.users'))
+    
+    # 检查用户名是否已存在
+    if User.query.filter_by(username=username).first():
+        error = '用户名已存在'
+        if request.is_json:
+            return jsonify({'error': error}), 400
+        flash(error, 'error')
+        return redirect(url_for('admin.users'))
+    
+    # 检查邮箱是否已存在
+    if User.query.filter_by(email=email).first():
+        error = '邮箱已存在'
+        if request.is_json:
+            return jsonify({'error': error}), 400
+        flash(error, 'error')
+        return redirect(url_for('admin.users'))
+    
+    # 创建新用户
+    user = User(
+        username=username,
+        email=email,
+        is_admin=is_admin,
+        is_active=is_active
+    )
+    user.set_password(password)
+    
+    try:
+        db.session.add(user)
+        db.session.commit()
+        
+        if request.is_json:
+            return jsonify({
+                'message': f'用户 {user.username} 创建成功',
+                'user': user.to_dict()
+            }), 201
+        
+        flash(f'用户 {user.username} 创建成功', 'success')
+    except Exception as e:
+        db.session.rollback()
+        if request.is_json:
+            return jsonify({'error': '创建用户失败'}), 500
+        flash('创建用户失败', 'error')
+    
+    return redirect(url_for('admin.users'))
+
+
 @admin_bp.route('/users/<int:user_id>/toggle_admin', methods=['POST'])
 @login_required
 @admin_required
@@ -120,8 +212,11 @@ def toggle_user_admin(user_id):
     """切换用户管理员状态"""
     user = User.query.get_or_404(user_id)
     
+    # 检查是否是AJAX请求
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     if user.id == current_user.id:
-        if request.is_json:
+        if is_ajax:
             return jsonify({'error': '不能修改自己的管理员状态'}), 400
         flash('不能修改自己的管理员状态', 'error')
         return redirect(url_for('admin.users'))
@@ -131,12 +226,12 @@ def toggle_user_admin(user_id):
     try:
         db.session.commit()
         status = '管理员' if user.is_admin else '普通用户'
-        if request.is_json:
+        if is_ajax:
             return jsonify({'message': f'用户 {user.username} 已设置为{status}'})
         flash(f'用户 {user.username} 已设置为{status}', 'success')
     except Exception as e:
         db.session.rollback()
-        if request.is_json:
+        if is_ajax:
             return jsonify({'error': '操作失败'}), 500
         flash('操作失败', 'error')
     
@@ -150,8 +245,11 @@ def toggle_user_active(user_id):
     """切换用户激活状态"""
     user = User.query.get_or_404(user_id)
     
+    # 检查是否是AJAX请求
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     if user.id == current_user.id:
-        if request.is_json:
+        if is_ajax:
             return jsonify({'error': '不能修改自己的激活状态'}), 400
         flash('不能修改自己的激活状态', 'error')
         return redirect(url_for('admin.users'))
@@ -161,14 +259,121 @@ def toggle_user_active(user_id):
     try:
         db.session.commit()
         status = '激活' if user.is_active else '禁用'
-        if request.is_json:
+        if is_ajax:
             return jsonify({'message': f'用户 {user.username} 已{status}'})
         flash(f'用户 {user.username} 已{status}', 'success')
     except Exception as e:
         db.session.rollback()
-        if request.is_json:
+        if is_ajax:
             return jsonify({'error': '操作失败'}), 500
         flash('操作失败', 'error')
+    
+    return redirect(url_for('admin.users'))
+
+
+@admin_bp.route('/users/<int:user_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_user(user_id):
+    """删除用户"""
+    user = User.query.get_or_404(user_id)
+    
+    # 检查是否是AJAX请求
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    if user.id == current_user.id:
+        if is_ajax:
+            return jsonify({'error': '不能删除自己的账户'}), 400
+        flash('不能删除自己的账户', 'error')
+        return redirect(url_for('admin.users'))
+    
+    username = user.username
+    
+    try:
+        # 删除用户相关的提交记录
+        Submission.query.filter_by(user_id=user.id).delete()
+        
+        # 删除用户
+        db.session.delete(user)
+        db.session.commit()
+        
+        if is_ajax:
+            return jsonify({'message': f'用户 {username} 已删除'})
+        flash(f'用户 {username} 已删除', 'success')
+    except Exception as e:
+        db.session.rollback()
+        if is_ajax:
+            return jsonify({'error': '删除用户失败'}), 500
+        flash('删除用户失败', 'error')
+    
+    return redirect(url_for('admin.users'))
+
+
+@admin_bp.route('/users/<int:user_id>', methods=['PUT'])
+@login_required
+@admin_required
+def update_user(user_id):
+    """更新用户信息"""
+    user = User.query.get_or_404(user_id)
+    
+    # 检查是否是AJAX请求
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    data = request.form if request.form else request.get_json()
+    if not data:
+        if is_ajax:
+            return jsonify({'error': '缺少请求数据'}), 400
+        flash('缺少请求数据', 'error')
+        return redirect(url_for('admin.users'))
+    
+    username = data.get('username', '').strip()
+    email = data.get('email', '').strip()
+    password = data.get('password', '').strip()
+    
+    # 验证必填字段
+    if not username or not email:
+        error = '用户名和邮箱不能为空'
+        if is_ajax:
+            return jsonify({'error': error}), 400
+        flash(error, 'error')
+        return redirect(url_for('admin.users'))
+    
+    # 检查用户名是否已存在（排除当前用户）
+    existing_user = User.query.filter(User.username == username, User.id != user_id).first()
+    if existing_user:
+        error = '用户名已存在'
+        if is_ajax:
+            return jsonify({'error': error}), 400
+        flash(error, 'error')
+        return redirect(url_for('admin.users'))
+    
+    # 检查邮箱是否已存在（排除当前用户）
+    existing_email = User.query.filter(User.email == email, User.id != user_id).first()
+    if existing_email:
+        error = '邮箱已存在'
+        if is_ajax:
+            return jsonify({'error': error}), 400
+        flash(error, 'error')
+        return redirect(url_for('admin.users'))
+    
+    # 更新用户信息
+    user.username = username
+    user.email = email
+    
+    # 如果提供了新密码，则更新密码
+    if password:
+        user.set_password(password)
+    
+    try:
+        db.session.commit()
+        if is_ajax:
+            return jsonify({'message': f'用户 {user.username} 信息已更新'})
+        flash(f'用户 {user.username} 信息已更新', 'success')
+    except Exception as e:
+        db.session.rollback()
+        if is_ajax:
+            return jsonify({'error': '更新用户失败'}), 500
+        flash('更新用户失败', 'error')
     
     return redirect(url_for('admin.users'))
 

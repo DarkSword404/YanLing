@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
+from flask_wtf.csrf import validate_csrf
 from werkzeug.security import check_password_hash
 from app import db
 from app.models import User, Team
@@ -44,7 +45,7 @@ def login():
                         'id': user.id,
                         'username': user.username,
                         'email': user.email,
-                        'role': user.role,
+                        'role': 'admin' if user.is_admin else 'user',
                         'team': user.team.name if user.team else None
                     }
                 })
@@ -141,7 +142,7 @@ def profile():
         'id': current_user.id,
         'username': current_user.username,
         'email': current_user.email,
-        'role': current_user.role,
+        'role': 'admin' if current_user.is_admin else 'user',
         'score': current_user.get_score(),
         'solved_challenges': current_user.get_solved_challenges_count(),
         'team': current_user.team.to_dict() if current_user.team else None,
@@ -152,6 +153,53 @@ def profile():
         return jsonify(user_data)
     
     return render_template('profile.html', user=user_data)
+
+
+@auth_bp.route('/edit_profile', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    """编辑用户资料"""
+    if request.method == 'POST':
+        try:
+            # 验证CSRF令牌
+            validate_csrf(request.form.get('csrf_token'))
+        except Exception as e:
+            flash('CSRF令牌验证失败，请重试', 'error')
+            return render_template('auth/edit_profile.html', user=current_user), 400
+            
+        if request.is_json:
+            data = request.get_json()
+            nickname = data.get('nickname', '').strip()
+            bio = data.get('bio', '').strip()
+        else:
+            nickname = request.form.get('nickname', '').strip()
+            bio = request.form.get('bio', '').strip()
+        
+        # 更新用户信息
+        if nickname:
+            current_user.nickname = nickname
+        if bio:
+            current_user.bio = bio
+        
+        try:
+            db.session.commit()
+            if request.is_json:
+                return jsonify({'message': '资料更新成功'})
+            flash('资料更新成功', 'success')
+            return redirect(url_for('auth.profile'))
+        except Exception as e:
+            db.session.rollback()
+            if request.is_json:
+                return jsonify({'error': '更新失败，请重试'}), 500
+            flash('更新失败，请重试', 'error')
+    
+    if request.is_json:
+        return jsonify({
+            'nickname': current_user.nickname or '',
+            'bio': current_user.bio or ''
+        })
+    
+    return render_template('auth/edit_profile.html', user=current_user)
 
 
 @auth_bp.route('/join_team', methods=['POST'])

@@ -9,12 +9,12 @@
     <!-- View Toggle -->
     <div class="btn-group" role="group">
         <input type="radio" class="btn-check" name="view" id="team-view" autocomplete="off" {% if view_type == 'team' %}checked{% endif %}>
-        <label class="btn btn-outline-primary" for="team-view" onclick="location.href='{{ url_for(\'main.scoreboard\', view=\'team\') }}'">
+        <label class="btn btn-outline-primary" for="team-view" onclick="location.href='{{ url_for('main.scoreboard', view='team') }}'">
             <i class="fas fa-users"></i> 团队排行
         </label>
         
         <input type="radio" class="btn-check" name="view" id="user-view" autocomplete="off" {% if view_type == 'user' %}checked{% endif %}>
-        <label class="btn btn-outline-primary" for="user-view" onclick="location.href='{{ url_for(\'main.scoreboard\', view=\'user\') }}'">
+        <label class="btn btn-outline-primary" for="user-view" onclick="location.href='{{ url_for('main.scoreboard', view='user') }}'">
             <i class="fas fa-user"></i> 个人排行
         </label>
     </div>

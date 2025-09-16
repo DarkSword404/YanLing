@@ -76,7 +76,7 @@
                 </div>
             </div>
             <div class="card-footer">
-                <a href="{{ url_for('admin.submissions') }}" class="text-white text-decoration-none">
+                <a href="{{ url_for('admin.users') }}" class="text-white text-decoration-none">
                     查看详情 <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
@@ -153,13 +153,13 @@
                             {% for submission in recent_submissions %}
                             <tr>
                                 <td>
-                                    <a href="{{ url_for('main.profile', user_id=submission.user.id) }}">
+                                    <a href="{{ url_for('auth.profile') }}?user_id={{ submission.user.id }}">
                                         {{ submission.user.username }}
                                     </a>
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('main.challenge_detail', id=submission.challenge.id) }}">
-                                        {{ submission.challenge.title }}
+                                    <a href="{{ url_for('challenges.detail', challenge_id=submission.challenge.id) }}">
+                                        {{ submission.challenge.name }}
                                     </a>
                                 </td>
                                 <td>
@@ -208,7 +208,7 @@
                             {% for user in recent_users %}
                             <tr>
                                 <td>
-                                    <a href="{{ url_for('main.profile', user_id=user.id) }}">
+                                    <a href="{{ url_for('auth.profile') }}?user_id={{ user.id }}">
                                         {{ user.username }}
                                     </a>
                                     {% if user.is_admin %}
@@ -220,7 +220,7 @@
                                     <small class="text-muted">{{ user.created_at.strftime('%m-%d %H:%M') }}</small>
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('admin.edit_user', id=user.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline-primary">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                 </td>

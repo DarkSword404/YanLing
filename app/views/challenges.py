@@ -65,7 +65,8 @@ def index():
     return render_template('challenges.html',
                          challenges=challenges_data,
                          categories=categories,
-                         current_category=category_id)
+                         current_category=category_id,
+                         pagination=None)
 
 
 @challenges_bp.route('/<int:challenge_id>')

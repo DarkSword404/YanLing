@@ -48,6 +48,36 @@ logs/
 .DS_Store
 Thumbs.db
 
+# Flask specific
+instance/
+.webassets-cache
+
+# Configuration and secrets
+config/local.py
+config/production.py
+.env.local
+.env.production
+*.key
+*.pem
+
+# Uploads and user content
+uploads/
+static/uploads/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Cookies and session data
+cookies.txt
+session_data/
+
+# Temporary files
+*.tmp
+*.temp
+
 # Flask
 instance/
 .webassets-cache

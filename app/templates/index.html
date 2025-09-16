@@ -12,7 +12,7 @@
             {% if not current_user.is_authenticated %}
                 <a class="btn btn-light btn-lg" href="{{ url_for('auth.register') }}" role="button">立即注册</a>
             {% else %}
-                <a class="btn btn-light btn-lg" href="{{ url_for('main.challenges') }}" role="button">开始挑战</a>
+                <a class="btn btn-light btn-lg" href="{{ url_for('challenges.index') }}" role="button">开始挑战</a>
             {% endif %}
         </div>
 

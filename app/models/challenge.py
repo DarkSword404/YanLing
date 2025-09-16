@@ -15,6 +15,7 @@ class Challenge(db.Model):
     description = Column(Text, nullable=False)
     flag = Column(String(255), nullable=False)
     points = Column(Integer, default=100)
+    difficulty = Column(String(20), default='medium')  # 题目难度: easy, medium, hard
     max_attempts = Column(Integer, default=0)  # 0表示无限制
     
     # 题目状态
@@ -24,6 +25,10 @@ class Challenge(db.Model):
     # 分类关联
     category_id = Column(Integer, ForeignKey('categories.id'), nullable=False)
     category = relationship('Category', back_populates='challenges')
+    
+    # 作者关联
+    author_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    author = relationship('User', backref='authored_challenges')
     
     # 文件和资源
     files = Column(Text)  # JSON格式存储文件列表
@@ -113,6 +118,7 @@ class Challenge(db.Model):
             'description': self.description,
             'points': self.get_dynamic_points() if self.is_dynamic else self.points,
             'category': self.category.name if self.category else None,
+            'difficulty': self.difficulty,
             'is_active': self.is_active,
             'is_dynamic': self.is_dynamic,
             'files': self.get_files_list(),

@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}编辑题目{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">编辑题目: {{ challenge.name }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="mb-3">
+                            <label for="name" class="form-label">题目名称 *</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ request.form.name or challenge.name }}" required>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="category_id" class="form-label">分类 *</label>
+                                <select class="form-select" id="category_id" name="category_id" required>
+                                    <option value="">选择分类</option>
+                                    {% for category in categories %}
+                                    <option value="{{ category.id }}" 
+                                            {% if (request.form.category_id or challenge.category_id)|string == category.id|string %}selected{% endif %}>
+                                        {{ category.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="difficulty" class="form-label">难度 *</label>
+                                <select class="form-select" id="difficulty" name="difficulty" required>
+                                    <option value="">选择难度</option>
+                                    <option value="easy" {% if (request.form.difficulty or challenge.difficulty) == 'easy' %}selected{% endif %}>简单</option>
+                                    <option value="medium" {% if (request.form.difficulty or challenge.difficulty) == 'medium' %}selected{% endif %}>中等</option>
+                                    <option value="hard" {% if (request.form.difficulty or challenge.difficulty) == 'hard' %}selected{% endif %}>困难</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="points" class="form-label">分值 *</label>
+                                <input type="number" class="form-control" id="points" name="points" 
+                                       value="{{ request.form.points or challenge.points }}" min="1" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="max_attempts" class="form-label">最大尝试次数</label>
+                                <input type="number" class="form-control" id="max_attempts" name="max_attempts" 
+                                       value="{{ request.form.max_attempts or challenge.max_attempts or '' }}" min="1" 
+                                       placeholder="留空表示无限制">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">题目描述 *</label>
+                            <textarea class="form-control" id="description" name="description" 
+                                      rows="6" required>{{ request.form.description or challenge.description }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="flag" class="form-label">Flag *</label>
+                            <input type="text" class="form-control" id="flag" name="flag" 
+                                   value="{{ request.form.flag or challenge.flag }}" required
+                                   placeholder="例如: flag{example_flag}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="hint" class="form-label">提示</label>
+                            <textarea class="form-control" id="hint" name="hint" 
+                                      rows="3" placeholder="可选的题目提示">{{ request.form.hint or '' }}</textarea>
+                        </div>
+
+                        {% if challenge.files %}
+                        <div class="mb-3">
+                            <label class="form-label">当前附件</label>
+                            <div class="list-group">
+                                {% for file in challenge.files %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ file.filename }}</span>
+                                    <div>
+                                        <a href="{{ url_for('challenges.download_file', file_id=file.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">下载</a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                onclick="deleteFile({{ file.id|tojson|safe }})">删除</button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="files" class="form-label">添加新附件</label>
+                            <input type="file" class="form-control" id="files" name="files" multiple>
+                            <div class="form-text">可以上传多个文件作为题目附件</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                       {% if request.form.is_active or (not request.form and challenge.is_active) %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">
+                                    激活题目
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin.challenges') }}" class="btn btn-secondary">取消</a>
+                            <button type="submit" class="btn btn-primary">保存修改</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteFile(fileId) {
+    if (confirm('确定要删除这个文件吗？')) {
+        fetch('/admin/challenges/files/' + fileId, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('删除失败: ' + data.error);
+            } else {
+                location.reload();
+            }
+        })
+        .catch(error => {
+            alert('删除失败');
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -55,6 +55,15 @@ class Team(db.Model):
                     solved_challenges.add(submission.challenge)
         return list(solved_challenges)
     
+    def get_solved_challenges_count(self):
+        """获取团队已解决的题目数量"""
+        solved_challenges = set()
+        for member in self.members:
+            for submission in member.submissions:
+                if submission.is_correct:
+                    solved_challenges.add(submission.challenge_id)
+        return len(solved_challenges)
+    
     def has_solved(self, challenge):
         """检查团队是否已解决某题目"""
         for member in self.members:

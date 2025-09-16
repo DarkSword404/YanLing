@@ -13,9 +13,9 @@
                 <i class="fas fa-filter"></i> 分类筛选
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="{{ url_for('main.challenges') }}">全部</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('challenges.index') }}">全部</a></li>
                 {% for category in categories %}
-                <li><a class="dropdown-item" href="{{ url_for('main.challenges', category=category.id) }}">{{ category.name }}</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('challenges.index', category=category.id) }}">{{ category.name }}</a></li>
                 {% endfor %}
             </ul>
         </div>
@@ -30,14 +30,14 @@
 <!-- Category Tabs -->
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
-        <a class="nav-link {{ 'active' if not current_category else '' }}" href="{{ url_for('main.challenges') }}">
+        <a class="nav-link {{ 'active' if not current_category else '' }}" href="{{ url_for('challenges.index') }}">
             全部 <span class="badge bg-secondary">{{ total_challenges }}</span>
         </a>
     </li>
     {% for category in categories %}
     <li class="nav-item">
         <a class="nav-link {{ 'active' if current_category and current_category.id == category.id else '' }}" 
-           href="{{ url_for('main.challenges', category=category.id) }}">
+           href="{{ url_for('challenges.index', category=category.id) }}">
             {{ category.name }} <span class="badge bg-secondary">{{ category.challenge_count }}</span>
         </a>
     </li>
@@ -74,7 +74,7 @@
                     <small class="text-muted">
                         <i class="fas fa-users"></i> {{ challenge.solve_count }} 解决
                     </small>
-                    <a href="{{ url_for('main.challenge_detail', id=challenge.id) }}" class="btn btn-primary btn-sm">
+                    <a href="{{ url_for('challenges.detail', challenge_id=challenge.id) }}" class="btn btn-primary btn-sm">
                         {% if challenge.is_solved %}
                             查看详情
                         {% else %}
@@ -89,12 +89,12 @@
 </div>
 
 <!-- Pagination -->
-{% if pagination.pages > 1 %}
+{% if pagination and pagination.pages > 1 %}
 <nav aria-label="题目分页">
     <ul class="pagination justify-content-center">
         {% if pagination.has_prev %}
             <li class="page-item">
-                <a class="page-link" href="{{ url_for('main.challenges', page=pagination.prev_num, **request.args) }}">上一页</a>
+                <a class="page-link" href="{{ url_for('challenges.index', page=pagination.prev_num, **request.args) }}">上一页</a>
             </li>
         {% endif %}
         
@@ -102,7 +102,7 @@
             {% if page_num %}
                 {% if page_num != pagination.page %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('main.challenges', page=page_num, **request.args) }}">{{ page_num }}</a>
+                        <a class="page-link" href="{{ url_for('challenges.index', page=page_num, **request.args) }}">{{ page_num }}</a>
                     </li>
                 {% else %}
                     <li class="page-item active">
@@ -118,7 +118,7 @@
         
         {% if pagination.has_next %}
             <li class="page-item">
-                <a class="page-link" href="{{ url_for('main.challenges', page=pagination.next_num, **request.args) }}">下一页</a>
+                <a class="page-link" href="{{ url_for('challenges.index', page=pagination.next_num, **request.args) }}">下一页</a>
             </li>
         {% endif %}
     </ul>

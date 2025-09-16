@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+
+{% block title %}团队管理{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>团队管理</h2>
+                <div>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTeamModal">
+                        <i class="fas fa-plus"></i> 添加团队
+                    </button>
+                </div>
+            </div>
+
+            <!-- 搜索和筛选 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">搜索团队</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="{{ request.args.get('search', '') }}" placeholder="团队名称或描述">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="sort" class="form-label">排序方式</label>
+                            <select class="form-select" id="sort" name="sort">
+                                <option value="name" {{ 'selected' if request.args.get('sort') == 'name' }}>按名称</option>
+                                <option value="score" {{ 'selected' if request.args.get('sort') == 'score' }}>按分数</option>
+                                <option value="created_at" {{ 'selected' if request.args.get('sort') == 'created_at' }}>按创建时间</option>
+                                <option value="member_count" {{ 'selected' if request.args.get('sort') == 'member_count' }}>按成员数量</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="order" class="form-label">排序顺序</label>
+                            <select class="form-select" id="order" name="order">
+                                <option value="asc" {{ 'selected' if request.args.get('order') == 'asc' }}>升序</option>
+                                <option value="desc" {{ 'selected' if request.args.get('order') == 'desc' }}>降序</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary">搜索</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 团队列表 -->
+            <div class="card">
+                <div class="card-body">
+                    {% if teams %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>团队名称</th>
+                                    <th>描述</th>
+                                    <th>成员数量</th>
+                                    <th>总分</th>
+                                    <th>解题数</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for team in teams %}
+                                <tr>
+                                    <td>{{ team.id }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm me-2">
+                                                <div class="avatar-title bg-info rounded-circle">
+                                                    {{ team.name[0].upper() }}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <strong>{{ team.name }}</strong>
+                                                {% if team.is_official %}
+                                                    <span class="badge bg-warning ms-1">官方</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ team.description or '' }}">
+                                            {{ team.description or '-' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ team.members|length }}</span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ team.score or 0 }}</strong>
+                                    </td>
+                                    <td>
+                                        {{ team.solved_challenges_count or 0 }}
+                                    </td>
+                                    <td>{{ team.created_at.strftime('%Y-%m-%d %H:%M') if team.created_at else '' }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-primary dropdown-toggle" 
+                                                    data-bs-toggle="dropdown">
+                                                操作
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <a class="dropdown-item" href="{{ url_for('teams.detail', team_id=team.id) }}" target="_blank">
+                                                        查看详情
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="#" onclick="editTeam({{ team.id }}, {{ team.name|tojson|safe }}, {{ (team.description or '')|tojson|safe }}, {{ team.is_official|lower }})">
+                                                        编辑团队
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="#" onclick="viewTeamMembers({{ team.id }})">
+                                                        管理成员
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="#" onclick="resetTeamPassword({{ team.id }})">
+                                                        重置密码
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item text-danger" href="#" onclick="deleteTeam({{ team.id }})">
+                                                        删除团队
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 分页 -->
+                    {% if pagination %}
+                    <nav aria-label="团队分页">
+                        <ul class="pagination justify-content-center">
+                            {% if pagination.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin.teams', page=pagination.prev_num, **request.args) }}">上一页</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for page_num in pagination.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != pagination.page %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('admin.teams', page=page_num, **request.args) }}">{{ page_num }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">…</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if pagination.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin.teams', page=pagination.next_num, **request.args) }}">下一页</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    {% else %}
+                    <div class="text-center py-5">
+                        <h5>暂无团队</h5>
+                        <p class="text-muted">还没有任何团队，点击上方按钮添加第一个团队吧！</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 创建团队模态框 -->
+<div class="modal fade" id="createTeamModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">添加团队</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createTeamForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="createName" class="form-label">团队名称 *</label>
+                        <input type="text" class="form-control" id="createName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="createDescription" class="form-label">团队描述</label>
+                        <textarea class="form-control" id="createDescription" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="createPassword" class="form-label">团队密码 *</label>
+                        <input type="password" class="form-control" id="createPassword" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="createIsOfficial" name="is_official">
+                            <label class="form-check-label" for="createIsOfficial">
+                                官方团队
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑团队模态框 -->
+<div class="modal fade" id="editTeamModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑团队</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editTeamForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <input type="hidden" id="editTeamId" name="id">
+                    <div class="mb-3">
+                        <label for="editName" class="form-label">团队名称 *</label>
+                        <input type="text" class="form-control" id="editName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDescription" class="form-label">团队描述</label>
+                        <textarea class="form-control" id="editDescription" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editIsOfficial" name="is_official">
+                            <label class="form-check-label" for="editIsOfficial">
+                                官方团队
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 团队成员模态框 -->
+<div class="modal fade" id="teamMembersModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">团队成员管理</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="teamMembersContent">
+                    <!-- 动态加载内容 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 创建团队
+document.getElementById('createTeamForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    fetch('/admin/teams', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('创建失败: ' + data.error);
+        } else {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        alert('创建失败');
+    });
+});
+
+// 编辑团队
+function editTeam(id, name, description, isOfficial) {
+    document.getElementById('editTeamId').value = id;
+    document.getElementById('editName').value = name;
+    document.getElementById('editDescription').value = description;
+    document.getElementById('editIsOfficial').checked = isOfficial;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editTeamModal'));
+    modal.show();
+}
+
+document.getElementById('editTeamForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const teamId = formData.get('id');
+    
+    fetch('/admin/teams/' + teamId, {
+        method: 'PUT',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('更新失败: ' + data.error);
+        } else {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        alert('更新失败');
+    });
+});
+
+// 查看团队成员
+function viewTeamMembers(teamId) {
+    fetch('/admin/teams/' + teamId + '/members')
+    .then(response => response.text())
+    .then(html => {
+        document.getElementById('teamMembersContent').innerHTML = html;
+        const modal = new bootstrap.Modal(document.getElementById('teamMembersModal'));
+        modal.show();
+    })
+    .catch(error => {
+        alert('加载成员信息失败');
+    });
+}
+
+// 重置团队密码
+function resetTeamPassword(teamId) {
+    if (confirm('确定要重置该团队的密码吗？新密码将随机生成。')) {
+        fetch('/admin/teams/' + teamId + '/reset_password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('重置失败: ' + data.error);
+            } else {
+                alert('密码重置成功！新密码：' + data.new_password);
+            }
+        })
+        .catch(error => {
+            alert('重置失败');
+        });
+    }
+}
+
+// 删除团队
+function deleteTeam(teamId) {
+    if (confirm('确定要删除该团队吗？此操作不可恢复！团队成员将变为无团队状态。')) {
+        fetch('/admin/teams/' + teamId, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('删除失败: ' + data.error);
+            } else {
+                location.reload();
+            }
+        })
+        .catch(error => {
+            alert('删除失败');
+        });
+    }
+}
+</script>
+
+<style>
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+}
+
+.avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+</style>
+{% endblock %}

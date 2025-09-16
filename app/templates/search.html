@@ -45,7 +45,7 @@
                                 <div class="card-body">
                                     <h6 class="card-title">{{ user.username }}</h6>
                                     <p class="card-text">积分: {{ user.score }}</p>
-                                    <a href="{{ url_for('user.profile', user_id=user.id) }}" 
+                                    <a href="{{ url_for('auth.profile') }}?user_id={{ user.id }}" 
                                        class="btn btn-sm btn-outline-primary">查看资料</a>
                                 </div>
                             </div>
@@ -70,7 +70,7 @@
                                 <div class="card-body">
                                     <h6 class="card-title">{{ team.name }}</h6>
                                     <p class="card-text">成员数: {{ team.member_count }}</p>
-                                    <a href="{{ url_for('team.detail', team_id=team.id) }}" 
+                                    <a href="{{ url_for('teams.detail', team_id=team.id) }}" 
                                        class="btn btn-sm btn-outline-primary">查看团队</a>
                                 </div>
                             </div>
@@ -98,7 +98,7 @@
                                         <span class="badge bg-secondary">{{ challenge.category }}</span>
                                         <span class="badge bg-warning">{{ challenge.points }}分</span>
                                     </p>
-                                    <a href="{{ url_for('challenge.detail', challenge_id=challenge.id) }}" 
+                                    <a href="{{ url_for('challenges.detail', challenge_id=challenge.id) }}" 
                                        class="btn btn-sm btn-outline-primary">查看题目</a>
                                 </div>
                             </div>

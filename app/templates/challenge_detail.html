@@ -58,6 +58,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('challenges.submit_flag', challenge_id=challenge.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="input-group">
                             <input type="text" class="form-control" name="flag" 
                                    placeholder="请输入flag..." required>
@@ -146,7 +147,8 @@
             {% endif %}
 
             <!-- 解题排行 -->
-            {% if challenge.top_solves %}
+            {% set correct_submissions = challenge.submissions | selectattr('is_correct') | list %}
+            {% if correct_submissions %}
             <div class="card mb-4">
                 <div class="card-header">
                     <h5><i class="fas fa-trophy"></i> 解题排行</h5>
@@ -162,22 +164,22 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for solve in challenge.top_solves %}
+                                {% for solve in correct_submissions[:10] %}
                                 <tr>
                                     <td>
-                                        {% if solve.is_first_blood %}
-                                        <span class="badge bg-danger">{{ solve.rank }}</span>
+                                        {% if loop.index == 1 %}
+                                        <span class="badge bg-danger">{{ loop.index }}</span>
                                         {% else %}
-                                        {{ solve.rank }}
+                                        {{ loop.index }}
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {{ solve.username }}
-                                        {% if solve.team_name %}
-                                        <br><small class="text-muted">{{ solve.team_name }}</small>
+                                        {{ solve.user.username }}
+                                        {% if solve.user.team %}
+                                        <br><small class="text-muted">{{ solve.user.team.name }}</small>
                                         {% endif %}
                                     </td>
-                                    <td><small>{{ solve.created_at }}</small></td>
+                                    <td><small>{{ solve.created_at.strftime('%Y-%m-%d %H:%M') }}</small></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
