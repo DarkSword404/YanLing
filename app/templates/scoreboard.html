@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}排行榜 - 雁翎CTF平台{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-trophy"></i> 排行榜</h2>
+    
+    <!-- View Toggle -->
+    <div class="btn-group" role="group">
+        <input type="radio" class="btn-check" name="view" id="team-view" autocomplete="off" {% if view_type == 'team' %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="team-view" onclick="location.href='{{ url_for(\'main.scoreboard\', view=\'team\') }}'">
+            <i class="fas fa-users"></i> 团队排行
+        </label>
+        
+        <input type="radio" class="btn-check" name="view" id="user-view" autocomplete="off" {% if view_type == 'user' %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="user-view" onclick="location.href='{{ url_for(\'main.scoreboard\', view=\'user\') }}'">
+            <i class="fas fa-user"></i> 个人排行
+        </label>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary">{{ stats.total_participants }}</h5>
+                <p class="card-text">参与{{ '团队' if view_type == 'team' else '用户' }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">{{ stats.total_solves }}</h5>
+                <p class="card-text">总解题数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">{{ stats.avg_score }}</h5>
+                <p class="card-text">平均分数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">{{ stats.highest_score }}</h5>
+                <p class="card-text">最高分数</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scoreboard Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            {% if view_type == 'team' %}
+                <i class="fas fa-users"></i> 团队排行榜
+            {% else %}
+                <i class="fas fa-user"></i> 个人排行榜
+            {% endif %}
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        {% if rankings %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th width="80">排名</th>
+                        <th>{{ '团队' if view_type == 'team' else '用户' }}名称</th>
+                        {% if view_type == 'team' %}
+                        <th width="100">成员数</th>
+                        {% endif %}
+                        <th width="120">总分</th>
+                        <th width="120">解题数</th>
+                        <th width="150">最后提交</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in rankings %}
+                    <tr class="{{ 'table-warning' if current_user.is_authenticated and ((view_type == 'team' and current_user.team and current_user.team.id == item.id) or (view_type == 'user' and current_user.id == item.id)) else '' }}">
+                        <td>
+                            <strong class="rank-{{ loop.index }}">
+                                {% if loop.index == 1 %}
+                                    <i class="fas fa-trophy text-warning"></i>
+                                {% elif loop.index == 2 %}
+                                    <i class="fas fa-medal text-secondary"></i>
+                                {% elif loop.index == 3 %}
+                                    <i class="fas fa-medal text-warning"></i>
+                                {% else %}
+                                    {{ loop.index }}
+                                {% endif %}
+                            </strong>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if view_type == 'team' %}
+                                    <i class="fas fa-users text-primary me-2"></i>
+                                    <strong>{{ item.name }}</strong>
+                                    {% if item.captain %}
+                                        <small class="text-muted ms-2">(队长: {{ item.captain.username }})</small>
+                                    {% endif %}
+                                {% else %}
+                                    <i class="fas fa-user text-success me-2"></i>
+                                    <strong>{{ item.username }}</strong>
+                                    {% if item.nickname %}
+                                        <small class="text-muted ms-2">({{ item.nickname }})</small>
+                                    {% endif %}
+                                    {% if item.team %}
+                                        <small class="text-muted ms-2">- {{ item.team.name }}</small>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                        {% if view_type == 'team' %}
+                        <td>
+                            <span class="badge bg-info">{{ item.member_count }}</span>
+                        </td>
+                        {% endif %}
+                        <td>
+                            <strong class="text-primary">{{ item.score }}</strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-success">{{ item.solve_count }}</span>
+                        </td>
+                        <td>
+                            {% if item.last_submission %}
+                                <small class="text-muted">{{ item.last_submission.strftime('%m-%d %H:%M') }}</small>
+                            {% else %}
+                                <small class="text-muted">-</small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if pagination and pagination.pages > 1 %}
+        <div class="card-footer">
+            <nav aria-label="排行榜分页">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('main.scoreboard', view=view_type, page=pagination.prev_num) }}">上一页</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in pagination.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num != pagination.page %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('main.scoreboard', view=view_type, page=page_num) }}">{{ page_num }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('main.scoreboard', view=view_type, page=pagination.next_num) }}">下一页</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">暂无排行数据</h4>
+            <p class="text-muted">还没有{{ '团队' if view_type == 'team' else '用户' }}参与比赛</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Current User/Team Position -->
+{% if current_user.is_authenticated %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-map-marker-alt"></i> 我的排名</h6>
+    </div>
+    <div class="card-body">
+        {% if view_type == 'team' and current_user.team %}
+            <p class="mb-0">
+                <strong>{{ current_user.team.name }}</strong> 
+                排名第 <span class="badge bg-primary">{{ current_user.team.rank or 'N/A' }}</span> 位，
+                总分 <span class="badge bg-success">{{ current_user.team.score }}</span> 分
+            </p>
+        {% elif view_type == 'user' %}
+            <p class="mb-0">
+                <strong>{{ current_user.username }}</strong> 
+                排名第 <span class="badge bg-primary">{{ current_user.rank or 'N/A' }}</span> 位，
+                总分 <span class="badge bg-success">{{ current_user.score }}</span> 分
+            </p>
+        {% else %}
+            <p class="mb-0 text-muted">
+                {% if view_type == 'team' %}
+                    您还没有加入团队
+                {% else %}
+                    您还没有解决任何题目
+                {% endif %}
+            </p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.rank-1 { color: #ffd700; }
+.rank-2 { color: #c0c0c0; }
+.rank-3 { color: #cd7f32; }
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0,123,255,.075);
+}
+
+.btn-check:checked + .btn-outline-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+}
+</style>
+{% endblock %}

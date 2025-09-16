@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}题目列表 - 雁翎CTF平台{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-puzzle-piece"></i> 挑战题目</h2>
+    
+    <!-- Filter and Search -->
+    <div class="d-flex gap-2">
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-filter"></i> 分类筛选
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{{ url_for('main.challenges') }}">全部</a></li>
+                {% for category in categories %}
+                <li><a class="dropdown-item" href="{{ url_for('main.challenges', category=category.id) }}">{{ category.name }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <form class="d-flex" method="GET">
+            <input class="form-control me-2" type="search" name="search" placeholder="搜索题目..." value="{{ request.args.get('search', '') }}">
+            <button class="btn btn-outline-success" type="submit"><i class="fas fa-search"></i></button>
+        </form>
+    </div>
+</div>
+
+<!-- Category Tabs -->
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if not current_category else '' }}" href="{{ url_for('main.challenges') }}">
+            全部 <span class="badge bg-secondary">{{ total_challenges }}</span>
+        </a>
+    </li>
+    {% for category in categories %}
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if current_category and current_category.id == category.id else '' }}" 
+           href="{{ url_for('main.challenges', category=category.id) }}">
+            {{ category.name }} <span class="badge bg-secondary">{{ category.challenge_count }}</span>
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+
+<!-- Challenges Grid -->
+{% if challenges %}
+<div class="row">
+    {% for challenge in challenges %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card challenge-card h-100 {{ 'solved' if challenge.is_solved else 'unsolved' }}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">{{ challenge.name }}</h5>
+                    {% if challenge.is_solved %}
+                        <i class="fas fa-check-circle text-success" title="已解决"></i>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-2">
+                    <span class="badge bg-secondary">
+                        {{ challenge.category.name if challenge.category else 'Unknown' }}
+                    </span>
+                    <span class="badge bg-primary">{{ challenge.points }} 分</span>
+                    {% if challenge.is_dynamic %}
+                        <span class="badge bg-warning">动态分值</span>
+                    {% endif %}
+                </div>
+                
+                <p class="card-text text-muted">{{ challenge.description[:100] }}{% if challenge.description|length > 100 %}...{% endif %}</p>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="fas fa-users"></i> {{ challenge.solve_count }} 解决
+                    </small>
+                    <a href="{{ url_for('main.challenge_detail', id=challenge.id) }}" class="btn btn-primary btn-sm">
+                        {% if challenge.is_solved %}
+                            查看详情
+                        {% else %}
+                            开始挑战
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<nav aria-label="题目分页">
+    <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('main.challenges', page=pagination.prev_num, **request.args) }}">上一页</a>
+            </li>
+        {% endif %}
+        
+        {% for page_num in pagination.iter_pages() %}
+            {% if page_num %}
+                {% if page_num != pagination.page %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('main.challenges', page=page_num, **request.args) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                {% endif %}
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('main.challenges', page=pagination.next_num, **request.args) }}">下一页</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+    <h4 class="text-muted">没有找到题目</h4>
+    <p class="text-muted">
+        {% if request.args.get('search') %}
+            没有找到包含 "{{ request.args.get('search') }}" 的题目
+        {% elif current_category %}
+            {{ current_category.name }} 分类下暂无题目
+        {% else %}
+            暂无可用题目
+        {% endif %}
+    </p>
+    {% if request.args.get('search') or current_category %}
+        <a href="{{ url_for('main.challenges') }}" class="btn btn-primary">查看全部题目</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.challenge-card {
+    transition: all 0.3s ease;
+    border: 1px solid #dee2e6;
+}
+
+.challenge-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.challenge-card.solved {
+    border-left: 4px solid #28a745;
+    background-color: #f8fff9;
+}
+
+.challenge-card.unsolved {
+    border-left: 4px solid #dc3545;
+}
+
+.nav-tabs .nav-link.active {
+    font-weight: bold;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %}

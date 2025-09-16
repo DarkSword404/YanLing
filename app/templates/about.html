@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}关于我们 - 雁翎CTF平台{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="mb-0">{{ about.platform_name }}</h2>
+                    <small class="text-muted">{{ about.version }}</small>
+                </div>
+                <div class="card-body">
+                    <p class="lead">{{ about.description }}</p>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h4>平台特性</h4>
+                            <ul class="list-group list-group-flush">
+                                {% for feature in about.features %}
+                                <li class="list-group-item">
+                                    <i class="fas fa-check text-success me-2"></i>{{ feature }}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h4>技术栈</h4>
+                            <ul class="list-group list-group-flush">
+                                {% for tech in about.tech_stack %}
+                                <li class="list-group-item">
+                                    <i class="fas fa-code text-primary me-2"></i>{{ tech }}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
