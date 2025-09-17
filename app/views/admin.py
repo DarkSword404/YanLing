@@ -850,7 +850,7 @@ def teams():
             }
         })
     
-    return render_template('admin/teams.html', teams=teams)
+    return render_template('admin/teams.html', teams=teams, pagination=teams)
 
 
 @admin_bp.route('/teams/<int:team_id>/toggle_active', methods=['POST'])
@@ -872,5 +872,37 @@ def toggle_team_active(team_id):
         if request.is_json:
             return jsonify({'error': '操作失败'}), 500
         flash('操作失败', 'error')
+    
+    return redirect(url_for('admin.teams'))
+
+
+@admin_bp.route('/teams/<int:team_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_team(team_id):
+    """删除团队"""
+    team = Team.query.get_or_404(team_id)
+    
+    # 检查是否是AJAX请求
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    team_name = team.name
+    
+    try:
+        # 删除团队成员关系
+        team.members.clear()
+        
+        # 删除团队
+        db.session.delete(team)
+        db.session.commit()
+        
+        if is_ajax:
+            return jsonify({'message': f'团队 {team_name} 已删除'})
+        flash(f'团队 {team_name} 已删除', 'success')
+    except Exception as e:
+        db.session.rollback()
+        if is_ajax:
+            return jsonify({'error': '删除团队失败'}), 500
+        flash('删除团队失败', 'error')
     
     return redirect(url_for('admin.teams'))

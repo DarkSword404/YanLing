@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}页面未找到 - 雁翎CTF平台{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="error-page fade-in">
+                <div class="error-code">
+                    <h1 class="display-1 text-gradient">404</h1>
+                </div>
+                
+                <div class="error-message">
+                    <h2 class="mb-3">页面未找到</h2>
+                    <p class="lead text-muted mb-4">
+                        抱歉，您访问的页面不存在或已被移动。
+                    </p>
+                </div>
+                
+                <div class="error-actions">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary me-3">
+                        <i class="fas fa-home"></i> 返回首页
+                    </a>
+                    <button onclick="history.back()" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> 返回上页
+                    </button>
+                </div>
+                
+                <div class="error-suggestions mt-5">
+                    <h5>您可以尝试：</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success"></i> 检查URL是否正确</li>
+                        <li><i class="fas fa-check text-success"></i> 访问 <a href="{{ url_for('challenges.index') }}">挑战页面</a></li>
+                        <li><i class="fas fa-check text-success"></i> 查看 <a href="{{ url_for('main.scoreboard') }}">排行榜</a></li>
+                        {% if current_user.is_authenticated %}
+                        <li><i class="fas fa-check text-success"></i> 前往 <a href="{{ url_for('auth.profile') }}">个人中心</a></li>
+                        {% else %}
+                        <li><i class="fas fa-check text-success"></i> <a href="{{ url_for('auth.login') }}">登录</a> 或 <a href="{{ url_for('auth.register') }}">注册</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-page {
+    padding: 3rem 0;
+}
+
+.error-code h1 {
+    font-size: 8rem;
+    font-weight: 900;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.error-suggestions {
+    text-align: left;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.error-suggestions ul li {
+    padding: 0.5rem 0;
+}
+
+@media (max-width: 768px) {
+    .error-code h1 {
+        font-size: 4rem;
+    }
+}
+</style>
+{% endblock %}

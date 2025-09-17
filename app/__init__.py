@@ -21,7 +21,13 @@ csrf = CSRFProtect()
 
 
 def create_app(config_class=Config):
-    app = Flask(__name__)
+    # 设置静态文件和模板文件路径
+    static_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static')
+    template_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+    
+    app = Flask(__name__, 
+                static_folder=static_folder,
+                template_folder=template_folder)
     app.config.from_object(config_class)
     
     # Initialize extensions with app
@@ -58,5 +64,9 @@ def create_app(config_class=Config):
     # 注册模板全局函数
     from app.utils.timezone import format_beijing_time
     app.jinja_env.globals['format_beijing_time'] = format_beijing_time
+    
+    # 注册错误处理器
+    from app.utils.error_handler import register_error_handlers
+    register_error_handlers(app)
     
     return app
