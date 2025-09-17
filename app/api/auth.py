@@ -62,14 +62,14 @@ def register():
         errors.append('用户名至少3个字符')
     elif not re.match(r'^[a-zA-Z0-9_]+$', username):
         errors.append('用户名只能包含字母、数字和下划线')
-    elif User.query.filter_by(username=username).first():
+    elif User.query.filter_by(username=username, is_active=True).first():
         errors.append('用户名已存在')
     
     if not email:
         errors.append('邮箱不能为空')
     elif not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
         errors.append('邮箱格式不正确')
-    elif User.query.filter_by(email=email).first():
+    elif User.query.filter_by(email=email, is_active=True).first():
         errors.append('邮箱已被注册')
     
     if not password or len(password) < 6:
@@ -158,7 +158,7 @@ def update_profile():
                     errors.append('邮箱不能为空')
                 elif not re.match(r'^[^@]+@[^@]+\.[^@]+$', value):
                     errors.append('邮箱格式不正确')
-                elif User.query.filter(User.email == value, User.id != current_user.id).first():
+                elif User.query.filter(User.email == value, User.id != current_user.id, User.is_active == True).first():
                     errors.append('邮箱已被使用')
                 else:
                     current_user.email = value

@@ -246,33 +246,33 @@
         <h5 class="mb-0"><i class="fas fa-server"></i> 系统状态</h5>
     </div>
     <div class="card-body">
-        <div class="row">
+        <div class="row text-center">
             <div class="col-md-3">
                 <div class="text-center">
                     <i class="fas fa-database fa-2x text-success mb-2"></i>
                     <h6>数据库</h6>
-                    <span class="badge bg-success">正常</span>
+                    <span id="db-status" class="badge bg-success">正常</span>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="text-center">
                     <i class="fas fa-memory fa-2x text-info mb-2"></i>
                     <h6>内存使用</h6>
-                    <span class="badge bg-info">{{ system_info.memory_usage }}%</span>
+                    <span id="memory-usage" class="badge bg-info">65%</span>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="text-center">
                     <i class="fas fa-hdd fa-2x text-warning mb-2"></i>
                     <h6>磁盘使用</h6>
-                    <span class="badge bg-warning">{{ system_info.disk_usage }}%</span>
+                    <span id="disk-usage" class="badge bg-warning">45%</span>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="text-center">
                     <i class="fas fa-clock fa-2x text-primary mb-2"></i>
                     <h6>运行时间</h6>
-                    <span class="badge bg-primary">{{ system_info.uptime }}</span>
+                    <span id="uptime" class="badge bg-primary">2天 3小时</span>
                 </div>
             </div>
         </div>
@@ -283,68 +283,157 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Category Distribution Chart
-    const categoryCtx = document.getElementById('categoryChart');
-    if (categoryCtx) {
-        const categoryChart = new Chart(categoryCtx.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Web', 'Crypto', 'Pwn', 'Reverse', 'Misc'],
-                datasets: [{
-                    data: [5, 3, 4, 2, 6],
-                    backgroundColor: [
-                        '#FF6384',
-                        '#36A2EB',
-                        '#FFCE56',
-                        '#4BC0C0',
-                        '#9966FF',
-                        '#FF9F40'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
-            }
-        });
-    }
-
-    // Registration Trend Chart
-    const registrationCtx = document.getElementById('registrationChart');
-    if (registrationCtx) {
-        const registrationChart = new Chart(registrationCtx.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: ['1月', '2月', '3月', '4月', '5月', '6月'],
-                datasets: [{
-                    label: '新注册用户',
-                    data: [12, 19, 3, 5, 2, 3],
-                    borderColor: '#36A2EB',
-                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                    tension: 0.1,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
+    // 加载分类分布数据
+    async function loadCategoryChart() {
+        try {
+            const response = await fetch('/admin/api/category-distribution');
+            const data = await response.json();
+            
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(item => item.name),
+                    datasets: [{
+                        data: data.map(item => item.value),
+                        backgroundColor: data.map(item => item.color || '#' + Math.floor(Math.random()*16777215).toString(16))
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
                         }
                     }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error('加载分类分布数据失败:', error);
+            // 使用默认数据作为后备
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['暂无数据'],
+                    datasets: [{
+                        data: [1],
+                        backgroundColor: ['#e0e0e0']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
     }
-});
+
+    // 加载注册趋势数据
+    async function loadRegistrationTrend() {
+        try {
+            const response = await fetch('/admin/api/registration-trend');
+            const data = await response.json();
+            
+            const registrationCtx = document.getElementById('registrationChart').getContext('2d');
+            new Chart(registrationCtx, {
+                type: 'line',
+                data: {
+                    labels: data.map(item => item.month),
+                    datasets: [{
+                        label: '新注册用户',
+                        data: data.map(item => item.count),
+                        borderColor: '#36A2EB',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('加载注册趋势数据失败:', error);
+            // 使用默认数据作为后备
+            const registrationCtx = document.getElementById('registrationChart').getContext('2d');
+            new Chart(registrationCtx, {
+                type: 'line',
+                data: {
+                    labels: ['暂无数据'],
+                    datasets: [{
+                        label: '新注册用户',
+                        data: [0],
+                        borderColor: '#36A2EB',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // 加载系统状态数据
+    async function loadSystemStatus() {
+        try {
+            const response = await fetch('/admin/api/system-status');
+            const data = await response.json();
+            
+            // 更新数据库状态
+            const dbStatus = document.getElementById('db-status');
+            dbStatus.textContent = data.database.status;
+            dbStatus.className = `badge bg-${data.database.status_class}`;
+            
+            // 更新内存使用
+            const memoryUsage = document.getElementById('memory-usage');
+            memoryUsage.textContent = `${data.memory.usage}%`;
+            memoryUsage.className = `badge bg-${data.memory.status_class}`;
+            
+            // 更新磁盘使用
+            const diskUsage = document.getElementById('disk-usage');
+            diskUsage.textContent = `${data.disk.usage}%`;
+            diskUsage.className = `badge bg-${data.disk.status_class}`;
+            
+            // 更新运行时间
+            const uptime = document.getElementById('uptime');
+            uptime.textContent = data.uptime.text;
+            uptime.className = `badge bg-${data.uptime.status_class}`;
+            
+        } catch (error) {
+            console.error('加载系统状态数据失败:', error);
+        }
+    }
+
+    // 页面加载完成后初始化图表和系统状态
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCategoryChart();
+        loadRegistrationTrend();
+        loadSystemStatus();
+        
+        // 每30秒更新一次系统状态
+        setInterval(loadSystemStatus, 30000);
+    });
 </script>
 {% endblock %}

@@ -66,7 +66,7 @@
                                 <div class="card-body">
                                     <h6 class="card-title">
                                         <span class="badge bg-{{ challenge.category.color if challenge.category else 'secondary' }} me-2">
-                                            {{ challenge.category.name if challenge.category else 'Unknown' }}
+                                            {{ challenge.category if challenge.category else 'Unknown' }}
                                         </span>
                                         {{ challenge.name }}
                                     </h6>

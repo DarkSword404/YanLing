@@ -75,7 +75,7 @@
                                         </a>
                                     </td>
                                     <td>
-                                        <span class="badge bg-secondary">{{ challenge.category.name if challenge.category else '未分类' }}</span>
+                                        <span class="badge bg-secondary">{{ challenge.category if challenge.category else '未分类' }}</span>
                                     </td>
                                     <td>
                                         {% if challenge.difficulty == 'easy' %}
@@ -164,46 +164,82 @@
 </div>
 
 <script>
+// 获取CSRF令牌
+function getCSRFToken() {
+    const token = document.querySelector('meta[name=csrf-token]');
+    return token ? token.getAttribute('content') : '';
+}
+
 function toggleChallengeStatus(challengeId) {
     if (confirm('确定要切换题目状态吗？')) {
+        const csrfToken = getCSRFToken();
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        };
+        
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+        
         fetch(`/admin/challenges/${challengeId}/toggle_active`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
+            headers: headers
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.error) {
                 alert('操作失败: ' + data.error);
             } else {
+                alert(data.message || '操作成功');
                 location.reload();
             }
         })
         .catch(error => {
-            alert('操作失败');
+            console.error('Error:', error);
+            alert('操作失败: ' + error.message);
         });
     }
 }
 
 function deleteChallenge(challengeId) {
     if (confirm('确定要删除这个题目吗？此操作不可恢复！')) {
+        const csrfToken = getCSRFToken();
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        };
+        
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+        
         fetch(`/admin/challenges/${challengeId}`, {
             method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-            }
+            headers: headers
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.error) {
                 alert('删除失败: ' + data.error);
             } else {
+                alert(data.message || '删除成功');
                 location.reload();
             }
         })
         .catch(error => {
-            alert('删除失败');
+            console.error('Error:', error);
+            alert('删除失败: ' + error.message);
         });
     }
 }

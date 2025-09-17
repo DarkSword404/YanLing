@@ -147,8 +147,7 @@
             {% endif %}
 
             <!-- 解题排行 -->
-            {% set correct_submissions = challenge.submissions | selectattr('is_correct') | list %}
-            {% if correct_submissions %}
+            {% if challenge.top_solves %}
             <div class="card mb-4">
                 <div class="card-header">
                     <h5><i class="fas fa-trophy"></i> 解题排行</h5>
@@ -164,22 +163,22 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for solve in correct_submissions[:10] %}
+                                {% for solve in challenge.top_solves %}
                                 <tr>
                                     <td>
-                                        {% if loop.index == 1 %}
-                                        <span class="badge bg-danger">{{ loop.index }}</span>
+                                        {% if solve.rank == 1 %}
+                                        <span class="badge bg-danger">{{ solve.rank }}</span>
                                         {% else %}
-                                        {{ loop.index }}
+                                        {{ solve.rank }}
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {{ solve.user.username }}
-                                        {% if solve.user.team %}
-                                        <br><small class="text-muted">{{ solve.user.team.name }}</small>
+                                        {{ solve.username }}
+                                        {% if solve.team_name %}
+                                        <br><small class="text-muted">{{ solve.team_name }}</small>
                                         {% endif %}
                                     </td>
-                                    <td><small>{{ solve.created_at.strftime('%Y-%m-%d %H:%M') }}</small></td>
+                                    <td><small>{{ solve.created_at }}</small></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

@@ -80,7 +80,9 @@ class Challenge(db.Model):
     
     def is_solved_by_team(self, team_id):
         """检查团队是否已解题"""
-        return any(s.user.team_id == team_id and s.is_correct for s in self.submissions)
+        if not team_id:
+            return False
+        return any(s.user and s.user.team_id == team_id and s.is_correct for s in self.submissions)
     
     def get_files_list(self):
         """获取文件列表"""
@@ -119,6 +121,7 @@ class Challenge(db.Model):
             'points': self.get_dynamic_points() if self.is_dynamic else self.points,
             'category': self.category.name if self.category else None,
             'difficulty': self.difficulty,
+            'max_attempts': self.max_attempts,
             'is_active': self.is_active,
             'is_dynamic': self.is_dynamic,
             'files': self.get_files_list(),

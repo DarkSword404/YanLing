@@ -60,7 +60,7 @@
                 
                 <div class="mb-2">
                     <span class="badge bg-secondary">
-                        {{ challenge.category.name if challenge.category else 'Unknown' }}
+                        {{ challenge.category if challenge.category else 'Unknown' }}
                     </span>
                     <span class="badge bg-primary">{{ challenge.points }} 分</span>
                     {% if challenge.is_dynamic %}

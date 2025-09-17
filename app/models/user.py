@@ -54,21 +54,20 @@ class User(UserMixin, db.Model):
     
     def get_score(self):
         """获取用户总分"""
-        if self.team_id:
-            return self.team.get_score()
-        else:
-            return sum(submission.challenge.points for submission in self.submissions 
-                      if submission.is_correct)
+        if self.submissions:
+            return sum(submission.points_awarded for submission in self.submissions 
+                      if submission.is_correct and submission.points_awarded)
+        return 0
     
     def get_solved_challenges(self):
         """获取已解决的题目"""
         return [submission.challenge for submission in self.submissions 
-                if submission.is_correct]
+                if submission.is_correct and submission.challenge]
     
     def get_solved_challenges_count(self):
         """获取已解决题目的数量"""
         return len([submission for submission in self.submissions 
-                   if submission.is_correct])
+                   if submission.is_correct and submission.challenge])
     
     def has_solved(self, challenge):
         """检查是否已解决某题目"""

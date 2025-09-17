@@ -14,9 +14,9 @@
                     <form method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="mb-3">
-                            <label for="title" class="form-label">题目名称 *</label>
-                            <input type="text" class="form-control" id="title" name="title" 
-                                   value="{{ request.form.title or '' }}" required>
+                            <label for="name" class="form-label">题目名称 *</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ request.form.name or '' }}" required>
                         </div>
 
                         <div class="row mb-3">

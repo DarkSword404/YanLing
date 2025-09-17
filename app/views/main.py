@@ -140,18 +140,48 @@ def scoreboard():
             stats['highest_score'] = rankings[0]['score']
             stats['avg_score'] = round(sum(r['score'] for r in rankings) / len(rankings), 1)
     
+    # 计算当前用户的排名和分数
+    current_user_rank = None
+    current_user_score = 0
+    current_team_rank = None
+    current_team_score = 0
+    
+    if current_user.is_authenticated:
+        if view_type == 'team' and current_user.team:
+            # 计算当前用户团队的排名和分数
+            current_team_score = current_user.team.get_score()
+            for i, ranking in enumerate(rankings):
+                if ranking['id'] == current_user.team.id:
+                    current_team_rank = i + 1
+                    break
+        else:
+            # 计算当前用户的排名和分数
+            current_user_score = current_user.get_score()
+            for i, ranking in enumerate(rankings):
+                if ranking['id'] == current_user.id:
+                    current_user_rank = i + 1
+                    break
+    
     if request.is_json:
         return jsonify({
             'view_type': view_type,
             'stats': stats,
-            'rankings': rankings
+            'rankings': rankings,
+            'current_user_rank': current_user_rank,
+            'current_user_score': current_user_score,
+            'current_team_rank': current_team_rank,
+            'current_team_score': current_team_score
         })
     
     return render_template('scoreboard.html',
                          view_type=view_type,
                          stats=stats,
                          rankings=rankings,
-                         pagination=pagination)
+                         pagination=pagination,
+                         current_user_rank=current_user_rank,
+                         current_user_score=current_user_score,
+                         current_team_rank=current_team_rank,
+                         current_team_score=current_team_score)
 
 
 @main_bp.route('/about')

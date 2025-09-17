@@ -31,8 +31,7 @@ def create_test_data():
             {"name": "Crypto", "description": "密码学相关题目", "color": "#28a745"},
             {"name": "Pwn", "description": "二进制漏洞利用题目", "color": "#dc3545"},
             {"name": "Reverse", "description": "逆向工程题目", "color": "#6f42c1"},
-            {"name": "Misc", "description": "杂项题目", "color": "#fd7e14"},
-            {"name": "Forensics", "description": "取证分析题目", "color": "#20c997"}
+            {"name": "Misc", "description": "杂项题目", "color": "#fd7e14"}
         ]
         
         categories = {}
@@ -111,7 +110,7 @@ def create_test_data():
             {
                 "name": "网络流量分析",
                 "description": "分析网络数据包，找出敏感信息。\n\n使用Wireshark分析给定的pcap文件。",
-                "category": "Forensics",
+                "category": "Misc",
                 "points": 180,
                 "flag": "flag{network_forensics}",
                 "hints": ["过滤HTTP流量", "查看POST请求", "注意Base64编码的数据"]

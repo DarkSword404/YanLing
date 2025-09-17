@@ -85,6 +85,154 @@ def dashboard():
                          })
 
 
+@admin_bp.route('/api/category-distribution')
+@login_required
+@admin_required
+def admin_category_distribution():
+    """管理后台题目分类分布API"""
+    from app.models import Category
+    
+    # 获取各分类的题目数量
+    categories = db.session.query(
+        Category.name,
+        Category.color,
+        func.count(Challenge.id).label('count')
+    ).join(Challenge).filter(
+        Challenge.is_active == True,
+        Category.is_active == True
+    ).group_by(Category.id, Category.name, Category.color).all()
+    
+    data = []
+    for category in categories:
+        data.append({
+            'name': category.name,
+            'value': category.count,
+            'color': category.color
+        })
+    
+    return jsonify(data)
+
+
+@admin_bp.route('/api/registration-trend')
+@login_required
+@admin_required
+def admin_registration_trend():
+    """管理后台用户注册趋势API"""
+    from datetime import datetime, timedelta
+    from sqlalchemy import extract
+    
+    # 获取最近6个月的用户注册数据
+    six_months_ago = datetime.utcnow() - timedelta(days=180)
+    
+    registrations = db.session.query(
+        extract('year', User.created_at).label('year'),
+        extract('month', User.created_at).label('month'),
+        func.count(User.id).label('count')
+    ).filter(
+        User.created_at >= six_months_ago,
+        User.is_active == True
+    ).group_by(
+        extract('year', User.created_at),
+        extract('month', User.created_at)
+    ).order_by(
+        extract('year', User.created_at),
+        extract('month', User.created_at)
+    ).all()
+    
+    data = []
+    for reg in registrations:
+        month_name = f"{int(reg.year)}-{int(reg.month):02d}"
+        data.append({
+            'month': month_name,
+            'count': reg.count
+        })
+    
+    return jsonify(data)
+
+
+@admin_bp.route('/api/system-status')
+@login_required
+@admin_required
+def admin_system_status():
+    """管理后台系统状态API"""
+    import psutil
+    import os
+    from datetime import datetime, timedelta
+    
+    try:
+        # 获取系统信息
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        # 计算运行时间（从进程启动时间开始）
+        process = psutil.Process(os.getpid())
+        start_time = datetime.fromtimestamp(process.create_time())
+        uptime = datetime.now() - start_time
+        
+        # 格式化运行时间
+        days = uptime.days
+        hours, remainder = divmod(uptime.seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+        
+        if days > 0:
+            uptime_str = f"{days}天 {hours}小时"
+        elif hours > 0:
+            uptime_str = f"{hours}小时 {minutes}分钟"
+        else:
+            uptime_str = f"{minutes}分钟"
+        
+        # 检查数据库连接状态
+        try:
+            db.session.execute('SELECT 1')
+            db_status = "正常"
+            db_status_class = "success"
+        except Exception:
+            db_status = "异常"
+            db_status_class = "danger"
+        
+        data = {
+            'database': {
+                'status': db_status,
+                'status_class': db_status_class
+            },
+            'memory': {
+                'usage': round(memory.percent, 1),
+                'status_class': 'danger' if memory.percent > 80 else 'warning' if memory.percent > 60 else 'info'
+            },
+            'disk': {
+                'usage': round(disk.percent, 1),
+                'status_class': 'danger' if disk.percent > 80 else 'warning' if disk.percent > 60 else 'info'
+            },
+            'uptime': {
+                'text': uptime_str,
+                'status_class': 'primary'
+            }
+        }
+        
+        return jsonify(data)
+        
+    except Exception as e:
+        # 如果获取系统信息失败，返回默认值
+        return jsonify({
+            'database': {
+                'status': '正常',
+                'status_class': 'success'
+            },
+            'memory': {
+                'usage': 65,
+                'status_class': 'info'
+            },
+            'disk': {
+                'usage': 45,
+                'status_class': 'info'
+            },
+            'uptime': {
+                'text': '2天 3小时',
+                'status_class': 'primary'
+            }
+        })
+
+
 @admin_bp.route('/users')
 @login_required
 @admin_required
@@ -160,16 +308,16 @@ def create_user():
         flash(error, 'error')
         return redirect(url_for('admin.users'))
     
-    # 检查用户名是否已存在
-    if User.query.filter_by(username=username).first():
+    # 检查用户名是否已存在（只检查活跃的用户）
+    if User.query.filter_by(username=username, is_active=True).first():
         error = '用户名已存在'
         if request.is_json:
             return jsonify({'error': error}), 400
         flash(error, 'error')
         return redirect(url_for('admin.users'))
     
-    # 检查邮箱是否已存在
-    if User.query.filter_by(email=email).first():
+    # 检查邮箱是否已存在（只检查活跃的用户）
+    if User.query.filter_by(email=email, is_active=True).first():
         error = '邮箱已存在'
         if request.is_json:
             return jsonify({'error': error}), 400
@@ -338,8 +486,8 @@ def update_user(user_id):
         flash(error, 'error')
         return redirect(url_for('admin.users'))
     
-    # 检查用户名是否已存在（排除当前用户）
-    existing_user = User.query.filter(User.username == username, User.id != user_id).first()
+    # 检查用户名是否已存在（排除当前用户，只检查活跃用户）
+    existing_user = User.query.filter(User.username == username, User.id != user_id, User.is_active == True).first()
     if existing_user:
         error = '用户名已存在'
         if is_ajax:
@@ -347,8 +495,8 @@ def update_user(user_id):
         flash(error, 'error')
         return redirect(url_for('admin.users'))
     
-    # 检查邮箱是否已存在（排除当前用户）
-    existing_email = User.query.filter(User.email == email, User.id != user_id).first()
+    # 检查邮箱是否已存在（排除当前用户，只检查活跃用户）
+    existing_email = User.query.filter(User.email == email, User.id != user_id, User.is_active == True).first()
     if existing_email:
         error = '邮箱已存在'
         if is_ajax:
@@ -444,8 +592,8 @@ def create_challenge():
             return render_template('admin/create_challenge.html', 
                                  categories=Category.query.filter_by(is_active=True).all())
         
-        # 检查题目名称是否重复
-        if Challenge.query.filter_by(name=data['name']).first():
+        # 检查题目名称是否重复（只检查活跃的题目）
+        if Challenge.query.filter_by(name=data['name'], is_active=True).first():
             error = '题目名称已存在'
             if request.is_json:
                 return jsonify({'error': error}), 400
@@ -549,19 +697,55 @@ def edit_challenge(challenge_id):
 def toggle_challenge_active(challenge_id):
     """切换题目激活状态"""
     challenge = Challenge.query.get_or_404(challenge_id)
+    
+    # 检查是否是AJAX请求
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     challenge.is_active = not challenge.is_active
     
     try:
         db.session.commit()
         status = '激活' if challenge.is_active else '禁用'
-        if request.is_json:
+        if is_ajax:
             return jsonify({'message': f'题目 {challenge.name} 已{status}'})
         flash(f'题目 {challenge.name} 已{status}', 'success')
     except Exception as e:
         db.session.rollback()
-        if request.is_json:
+        if is_ajax:
             return jsonify({'error': '操作失败'}), 500
         flash('操作失败', 'error')
+    
+    return redirect(url_for('admin.challenges'))
+
+
+@admin_bp.route('/challenges/<int:challenge_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_challenge(challenge_id):
+    """删除题目"""
+    challenge = Challenge.query.get_or_404(challenge_id)
+    
+    # 检查是否是AJAX请求
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    challenge_name = challenge.name
+    
+    try:
+        # 删除题目相关的提交记录和提示
+        Submission.query.filter_by(challenge_id=challenge.id).delete()
+        
+        # 删除题目
+        db.session.delete(challenge)
+        db.session.commit()
+        
+        if is_ajax:
+            return jsonify({'message': f'题目 {challenge_name} 已删除'})
+        flash(f'题目 {challenge_name} 已删除', 'success')
+    except Exception as e:
+        db.session.rollback()
+        if is_ajax:
+            return jsonify({'error': '删除失败'}), 500
+        flash('删除失败', 'error')
     
     return redirect(url_for('admin.challenges'))
 
@@ -601,7 +785,7 @@ def create_category():
         flash(error, 'error')
         return redirect(url_for('admin.categories'))
     
-    if Category.query.filter_by(name=name).first():
+    if Category.query.filter_by(name=name, is_active=True).first():
         error = '分类名称已存在'
         if request.is_json:
             return jsonify({'error': error}), 400

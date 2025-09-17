@@ -36,6 +36,18 @@ class Submission(db.Model):
     
     def check_and_update_correctness(self):
         """检查并更新提交的正确性"""
+        # 确保challenge关联存在
+        if not self.challenge:
+            # 如果关联不存在，尝试重新加载
+            from app.models.challenge import Challenge
+            self.challenge = Challenge.query.get(self.challenge_id)
+            
+        if not self.challenge:
+            # 如果仍然找不到challenge，返回False
+            self.is_correct = False
+            self.points_awarded = 0
+            return False
+            
         if self.challenge.check_flag(self.submitted_flag):
             self.is_correct = True
             # 计算得分

@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import validate_csrf
 from werkzeug.security import check_password_hash
+from datetime import datetime, timezone, timedelta
 from app import db
 from app.models import User, Team
 import re
@@ -35,6 +36,11 @@ def login():
                     return jsonify({'error': '账户已被禁用'}), 403
                 flash('账户已被禁用', 'error')
                 return render_template('auth/login.html')
+            
+            # 更新最后登录时间（使用北京时间）
+            from app.utils.timezone import get_beijing_time
+            user.last_login = get_beijing_time()
+            db.session.commit()
             
             login_user(user, remember=True)
             
@@ -81,12 +87,12 @@ def register():
         
         if not username or len(username) < 3:
             errors.append('用户名至少3个字符')
-        elif User.query.filter_by(username=username).first():
+        elif User.query.filter_by(username=username, is_active=True).first():
             errors.append('用户名已存在')
         
         if not email or not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
             errors.append('请输入有效的邮箱地址')
-        elif User.query.filter_by(email=email).first():
+        elif User.query.filter_by(email=email, is_active=True).first():
             errors.append('邮箱已被注册')
         
         if not password or len(password) < 6:
@@ -138,13 +144,27 @@ def logout():
 @login_required
 def profile():
     """用户资料"""
+    from app.models import Submission
+    from sqlalchemy import desc
+    
+    # 获取最近的提交记录（最多10条）
+    recent_submissions = (db.session.query(Submission)
+                         .filter_by(user_id=current_user.id)
+                         .order_by(desc(Submission.created_at))
+                         .limit(10)
+                         .all())
+    
+    # 获取已解决的题目
+    solved_challenges = current_user.get_solved_challenges()
+    
     user_data = {
         'id': current_user.id,
         'username': current_user.username,
         'email': current_user.email,
+        'nickname': current_user.nickname,
         'role': 'admin' if current_user.is_admin else 'user',
         'score': current_user.get_score(),
-        'solved_challenges': current_user.get_solved_challenges_count(),
+        'solved_challenges': len(solved_challenges),
         'team': current_user.team.to_dict() if current_user.team else None,
         'created_at': current_user.created_at.isoformat() if current_user.created_at else None
     }
@@ -152,7 +172,10 @@ def profile():
     if request.is_json:
         return jsonify(user_data)
     
-    return render_template('profile.html', user=user_data)
+    return render_template('profile.html', 
+                         user=user_data,
+                         recent_submissions=recent_submissions,
+                         solved_challenges=solved_challenges)
 
 
 @auth_bp.route('/edit_profile', methods=['GET', 'POST'])

@@ -107,8 +107,8 @@
                                             <span class="badge bg-warning">未激活</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else '' }}</td>
-                                    <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else '从未登录' }}</td>
+                                    <td>{{ format_beijing_time(user.created_at) if user.created_at else '' }}</td>
+                                    <td>{{ format_beijing_time(user.last_login) if user.last_login else '从未登录' }}</td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
                                             <button type="button" class="btn btn-outline-primary dropdown-toggle" 

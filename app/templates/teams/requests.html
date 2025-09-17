@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}团队申请管理 - 雁翎CTF平台{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- 页面标题 -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-inbox"></i> 团队申请管理</h2>
+                    <p class="text-muted mb-0">团队：{{ team.name }}</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('teams.detail', team_id=team.id) }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> 返回团队
+                    </a>
+                </div>
+            </div>
+
+            <!-- 申请列表 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-plus"></i> 待审核申请
+                        {% if requests %}
+                            <span class="badge bg-primary ms-2">{{ requests|length }}</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if requests %}
+                        <div class="row">
+                            {% for req in requests %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-left-primary">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <div>
+                                                <h6 class="mb-1">
+                                                    <i class="fas fa-user"></i> {{ req.user.username }}
+                                                </h6>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock"></i> 
+                                                    {{ req.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                                </small>
+                                            </div>
+                                            <span class="badge bg-warning">待审核</span>
+                                        </div>
+                                        
+                                        {% if req.message %}
+                                        <div class="mb-3">
+                                            <strong>申请理由：</strong>
+                                            <p class="text-muted mb-0">{{ req.message }}</p>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <!-- 用户信息 -->
+                                        <div class="mb-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-trophy"></i> 积分：{{ req.user.get_score() }} 分 |
+                                                <i class="fas fa-flag"></i> 解题：{{ req.user.get_solved_challenges_count() }} 题
+                                            </small>
+                                        </div>
+                                        
+                                        <!-- 操作按钮 -->
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-success btn-sm" 
+                                                    onclick="showApproveModal({{ req.id }}, '{{ req.user.username|e }}')">
+                                                <i class="fas fa-check"></i> 批准
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm" 
+                                                    onclick="showRejectModal({{ req.id }}, '{{ req.user.username|e }}')">
+                                                <i class="fas fa-times"></i> 拒绝
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">暂无待审核申请</h5>
+                            <p class="text-muted">当有用户申请加入团队时，申请会显示在这里</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 批准申请模态框 -->
+<div class="modal fade" id="approveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">批准申请</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="approveForm" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <p>确定要批准 <strong id="approveUsername"></strong> 的加入申请吗？</p>
+                    <div class="mb-3">
+                        <label for="approveMessage" class="form-label">审核备注 <span class="text-muted">(可选)</span></label>
+                        <textarea class="form-control" id="approveMessage" name="message" rows="2" 
+                                  placeholder="欢迎加入团队！"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> 批准申请
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 拒绝申请模态框 -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">拒绝申请</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="rejectForm" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <p>确定要拒绝 <strong id="rejectUsername"></strong> 的加入申请吗？</p>
+                    <div class="mb-3">
+                        <label for="rejectMessage" class="form-label">拒绝理由 <span class="text-muted">(可选)</span></label>
+                        <textarea class="form-control" id="rejectMessage" name="message" rows="2" 
+                                  placeholder="很抱歉，团队暂时不适合..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-times"></i> 拒绝申请
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showApproveModal(requestId, username) {
+    document.getElementById('approveUsername').textContent = username;
+    document.getElementById('approveForm').action = `/teams/requests/${requestId}/approve`;
+    new bootstrap.Modal(document.getElementById('approveModal')).show();
+}
+
+function showRejectModal(requestId, username) {
+    document.getElementById('rejectUsername').textContent = username;
+    document.getElementById('rejectForm').action = `/teams/requests/${requestId}/reject`;
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.border-left-primary {
+    border-left: 4px solid #007bff !important;
+}
+
+.card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: box-shadow 0.2s;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %}

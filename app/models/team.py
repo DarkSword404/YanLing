@@ -33,9 +33,10 @@ class Team(db.Model):
         """获取团队总分"""
         solved_challenges = set()
         for member in self.members:
-            for submission in member.submissions:
-                if submission.is_correct:
-                    solved_challenges.add(submission.challenge_id)
+            if member and member.submissions:
+                for submission in member.submissions:
+                    if submission.is_correct and submission.challenge:
+                        solved_challenges.add(submission.challenge_id)
         
         from app.models.challenge import Challenge
         total_score = 0
@@ -50,18 +51,20 @@ class Team(db.Model):
         """获取团队已解决的题目"""
         solved_challenges = set()
         for member in self.members:
-            for submission in member.submissions:
-                if submission.is_correct:
-                    solved_challenges.add(submission.challenge)
+            if member and member.submissions:
+                for submission in member.submissions:
+                    if submission.is_correct and submission.challenge:
+                        solved_challenges.add(submission.challenge)
         return list(solved_challenges)
     
     def get_solved_challenges_count(self):
         """获取团队已解决的题目数量"""
         solved_challenges = set()
         for member in self.members:
-            for submission in member.submissions:
-                if submission.is_correct:
-                    solved_challenges.add(submission.challenge_id)
+            if member and member.submissions:
+                for submission in member.submissions:
+                    if submission.is_correct and submission.challenge:
+                        solved_challenges.add(submission.challenge_id)
         return len(solved_challenges)
     
     def has_solved(self, challenge):

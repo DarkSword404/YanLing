@@ -143,11 +143,11 @@
                             {% for submission in recent_submissions %}
                             <tr>
                                 <td>
-                                    <a href="{{ url_for('main.challenge_detail', id=submission.challenge.id) }}" class="text-decoration-none">
-                                        <strong>{{ submission.challenge.title }}</strong>
+                                    <a href="{{ url_for('challenges.detail', challenge_id=submission.challenge.id) }}" class="text-decoration-none">
+                                        <strong>{{ submission.challenge.name }}</strong>
                                     </a>
                                     <br>
-                                    <small class="text-muted">{{ submission.challenge.category.name }}</small>
+                                    <small class="text-muted">{{ submission.challenge.category.name if submission.challenge.category else '未分类' }}</small>
                                 </td>
                                 <td>
                                     {% if submission.is_correct %}
@@ -199,9 +199,9 @@
                     {% for challenge in solved_challenges %}
                     <div class="col-md-6 mb-2">
                         <div class="d-flex align-items-center">
-                            <span class="badge bg-{{ challenge.category.name|lower }} me-2">{{ challenge.category.name }}</span>
-                            <a href="{{ url_for('main.challenge_detail', id=challenge.id) }}" class="text-decoration-none">
-                                {{ challenge.title }}
+                            <span class="badge bg-{{ challenge.category|lower }} me-2">{{ challenge.category }}</span>
+                            <a href="{{ url_for('challenges.detail', challenge_id=challenge.id) }}" class="text-decoration-none">
+                                {{ challenge.name }}
                             </a>
                             <small class="text-muted ms-auto">{{ challenge.points }}分</small>
                         </div>

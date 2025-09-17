@@ -46,11 +46,17 @@ def create_app(config_class=Config):
     from app.views.challenges import challenges_bp
     from app.views.teams import teams_bp
     from app.views.admin import admin_bp
+    from app.views.dashboard import dashboard_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(challenges_bp)
     app.register_blueprint(teams_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(dashboard_bp)
+    
+    # 注册模板全局函数
+    from app.utils.timezone import format_beijing_time
+    app.jinja_env.globals['format_beijing_time'] = format_beijing_time
     
     return app

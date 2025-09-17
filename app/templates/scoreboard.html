@@ -202,14 +202,14 @@
         {% if view_type == 'team' and current_user.team %}
             <p class="mb-0">
                 <strong>{{ current_user.team.name }}</strong> 
-                排名第 <span class="badge bg-primary">{{ current_user.team.rank or 'N/A' }}</span> 位，
-                总分 <span class="badge bg-success">{{ current_user.team.score }}</span> 分
+                排名第 <span class="badge bg-primary">{{ current_team_rank or 'N/A' }}</span> 位，
+                总分 <span class="badge bg-success">{{ current_team_score }}</span> 分
             </p>
         {% elif view_type == 'user' %}
             <p class="mb-0">
                 <strong>{{ current_user.username }}</strong> 
-                排名第 <span class="badge bg-primary">{{ current_user.rank or 'N/A' }}</span> 位，
-                总分 <span class="badge bg-success">{{ current_user.score }}</span> 分
+                排名第 <span class="badge bg-primary">{{ current_user_rank or 'N/A' }}</span> 位，
+                总分 <span class="badge bg-success">{{ current_user_score }}</span> 分
             </p>
         {% else %}
             <p class="mb-0 text-muted">
